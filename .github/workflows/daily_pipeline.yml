@@ -1,0 +1,47 @@
+name: Daily Data Pipeline
+
+on:
+  schedule:
+    - cron: '0 6 * * *'  # 6 AM UTC daily
+  workflow_dispatch:  # Manual trigger button in GitHub UI
+
+# Required for pushing commits back to repo
+permissions:
+  contents: write
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install duckdb requests python-dotenv pydantic-settings tenacity structlog tqdm dbt-duckdb
+
+      - name: Run NSF Extractor
+        run: python -m extractors.federal_apis.nsf_extractor
+
+      - name: Run NIH Extractor
+        run: python -m extractors.federal_apis.nih_extractor
+
+      - name: Run dbt transformations
+        run: |
+          cd transform/scholarhub
+          dbt run --profiles-dir .
+          dbt test --profiles-dir .
+
+      - name: Commit updated database
+        run: |
+          git config --global user.name 'GitHub Actions Bot'
+          git config --global user.email 'actions@github.com'
+          git add warehouse/scholarhub.duckdb
+          git commit -m "Update data: $(date +'%Y-%m-%d')" || echo "No changes to commit"
+          git push

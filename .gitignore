@@ -44,6 +44,10 @@ htmlcov/
 *~
 .DS_Store
 
+# Documentation - ignore all markdown except README
+*.md
+!README.md
+
 # Environment variables
 .env
 .env.local
@@ -52,8 +56,11 @@ htmlcov/
 data/raw/**/*.json
 data/raw/**/*.csv
 data/exports/
-*.duckdb
 *.duckdb.wal
+
+# Allow warehouse/*.duckdb to be committed for Streamlit Cloud deployment
+# (GitHub Actions will update this file daily)
+# Note: Keep database size <100 MB for free tier
 
 # Logs
 *.log
